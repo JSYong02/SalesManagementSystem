@@ -45,6 +45,5 @@ class TransactionModel extends Model
         ->orderBy('transactions.transaction_date', 'DESC')
         ->orderBy('transactions.id', 'DESC')
         ->FindAll();
-        sdsadasd
     }
 }
