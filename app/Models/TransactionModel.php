@@ -18,7 +18,8 @@ class TransactionModel extends Model
         'quantity',
         'unit_price',
         'total_amount',
-        'transaction_date'
+        'transaction_date',
+        'transaction_time'
     ];
 
     protected $useTimestamps = false;
@@ -43,6 +44,7 @@ class TransactionModel extends Model
             'items.id = transactions.item_id'
         )
         ->orderBy('transactions.transaction_date', 'DESC')
+        ->orderBy('transactions.transaction_time', 'DESC')
         ->orderBy('transactions.id', 'DESC')
         ->FindAll();
     }

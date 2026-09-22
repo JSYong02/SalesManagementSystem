@@ -2,7 +2,7 @@
 <html lang="en">
     <head>
         <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width", initial-scale=1.0>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
         <title>Sales Management System</title>
 
@@ -70,7 +70,8 @@
             }
 
             #searchButton {
-                background: #333;
+                background: #008cff;
+                color: white;
             }
 
             #resetButton {
@@ -111,7 +112,7 @@
                 background: #eee;
             }
 
-            .sales {
+            .sale {
                 color: green;
                 font-weight: bold;
             }
@@ -137,7 +138,7 @@
                         <label for="transaction">Transaction</label>
                         <select id="transaction">
                             <option value="both">Both</option>
-                            <option value="sales">Sales</option>
+                            <option value="sale">Sales</option>
                             <option value="purchase">Purchase</option>
                         </select>
                     </div>
@@ -172,8 +173,18 @@
                     </div>
 
                     <div class="search-field">
-                        <label for="dateTo"></label>
+                        <label for="dateTo">Date To</label>
                         <input type="date" id="dateTo">
+                    </div>
+
+                    <div class="search-field">
+                        <label for="timeFrom">Time From</label>
+                        <input type="time" id="timeFrom" step="1">
+                    </div>
+
+                    <div class="search-field">
+                        <label for="timeTo">Date To</label>
+                        <input type="time" id="timeTo" step="1">
                     </div>
 
                     <div class="button-group">
@@ -185,6 +196,8 @@
             </div>
 
             <h2>Transactions</h2>
+
+            <div id="message" class="message"></div>
 
             <table>
                 <thead>
@@ -200,11 +213,13 @@
                         <th>Unit Price</th>
                         <th>Total</th>
                         <th>Date</th>
+                        <th>Time</th>
                     </tr>
                 </thead>
             
 
-                <tbody>
+                <tbody id="transactionTableBody">
+
                     <?php if (!empty($transactions)): ?>
 
                         <?php foreach ($transactions as $transaction): ?>
@@ -259,6 +274,10 @@
                                 <td>
                                     <?= esc($transaction['transaction_date']) ?>
                                 </td>
+
+                                <td>
+                                    <?= esc($transaction['transaction_time']) ?>
+                                </td>
                             </tr>
 
                         <?php endforeach; ?>
@@ -289,6 +308,8 @@
                 const type = document.getElementById('type').value;
                 const dateFrom = document.getElementById('dateFrom').value;
                 const dateTo = document.getElementById('dateTo').value;
+                const timeFrom = document.getElementById('timeFrom').value;
+                const timeTo = document.getElementById('timeTo').value;
 
                 const requestData = {
                     transaction: transaction,
@@ -296,49 +317,56 @@
                     keyword: keyword,
                     type: type,
                     date_from: dateFrom,
-                    date_to: dateTo
-                }
+                    date_to: dateTo,
+                    time_from: timeFrom,
+                    time_to: timeTo
+                };
+
+                localStorage.setItem(
+                    'salesManagementSearch',
+                    JSON.stringify(requestData)
+                );
 
                 const message = document.getElementById('message');
 
                 message.textContent = 'Searching...';
 
                 message.className = 'message loading';
-            }
 
-            try {
-                const response = await fetch(
-                    '<?=  base_url('api/transactions/search') ?>',
-                    {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
+                try {
+                    const response = await fetch(
+                        '<?=  base_url('api/transactions/search') ?>',
+                        {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
 
-                        body: JSON.stringify(requestData)
-                    }
-                );
-
-                const result = await response.json();
-
-                if (result.status !== 'success') {
-                    throw new Error(
-                        result.message || 'Search Failed.'
+                            body: JSON.stringify(requestData)
+                        }
                     );
+
+                    const result = await response.json();
+
+                    if (result.status !== 'success') {
+                        throw new Error(
+                            result.message || 'Search Failed.'
+                        );
+                    }
+
+                    displayTransactions(result.data);
+
+                    message.textContent = `${result.count} transaction(s) found.`;
+
+                    message.className = 'message';
                 }
+                catch (error) {
+                    console.error(error);
 
-                displayTransactions(result.data);
+                    message.textContent = error.message;
 
-                message.textContent = `${result.count} transaction(s) found.`;
-
-                message.className = 'message';
-            }
-            catch (error) {
-                console.error(error);
-
-                message.textContent = error.message;
-
-                message.className = 'message error';
+                    message.className = 'message error';
+                }
             }
 
             function displayTransactions(transactions) 
@@ -412,6 +440,10 @@
                             ${escapeHtml(transaction.transaction_date)}
                         </td>
 
+                        <td>
+                            ${escapeHtml(transaction.transaction_time)}
+                        </td>
+
                     `;
 
                     tableBody.appendChild(row);
@@ -420,19 +452,23 @@
 
             function resetSearch()
             {
+                localStorage.removeItem('salesManagementSearch');
+
                 document.getElementById('transaction').value = 'both';
                 document.getElementById('searchBy').value = 'employee_name';
                 document.getElementById('keyword').value = '';
                 document.getElementById('type').value = '';
                 document.getElementById('dateFrom').value = '';
                 document.getElementById('dateTo').value = '';
+                document.getElementById('timeFrom').value = '';
+                document.getElementById('timeTo').value = '';
 
                 document.getElementById('message').textContent = '';
 
                 window.location.reload();
             }
 
-            function formatMonet(value) 
+            function formatMoney(value) 
             {
                 return Number(value).toLocaleString(
                     'en-MY',
@@ -451,6 +487,62 @@
 
                 return div.innerHTML;
             }
+
+            function setDefaultDates()
+            {
+                const today = new Date();
+
+                const lastMonth = new Date(today);
+
+                lastMonth.setMonth(
+                    lastMonth.getMonth() - 1
+                )
+
+                document.getElementById('dateTo').value = formatDate(today);
+                document.getElementById('dateFrom').value = formatDate(lastMonth);
+
+                document.getElementById('timeFrom').value = '00:00:00';
+                document.getElementById('timeTo').value = '23:59:59';
+            }
+
+            function formatDate(date)
+            {
+                const year = date.getFullYear();
+
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+
+                const day = String(date.getDate()).padStart(2, '0');
+
+                return `${year}-${month}-${day}`;
+            }
+
+            document.addEventListener('DOMContentLoaded', function () {
+
+                const savedSearch = localStorage.getItem('salesManagementSearch');
+
+                if (savedSearch) {
+                    const data = JSON.parse(savedSearch);
+
+                    document.getElementById('transaction').value = data.transaction || 'both';
+                    document.getElementById('searchBy').value = data.search_by || '';
+                    document.getElementById('keyword').value = data.keyword || '';
+                    document.getElementById('type').value = data.type || '';
+                    document.getElementById('dateFrom').value = data.date_from || '';
+                    document.getElementById('dateTo').value = data.date_to || '';
+                    document.getElementById('timeFrom').value = data.time_from || '00:00:00';
+                    document.getElementById('timeTo').value = data.time_to || '23:59:59';
+
+                    searchTransactions();
+                } else {
+                    setDefaultDates();
+
+                    searchTransactions();
+                }
+            });
+
+            document.getElementById('transaction').addEventListener('change', function () {
+                searchTransactions();
+            })
         </script>
     </body>
 </html>

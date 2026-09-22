@@ -27,6 +27,8 @@ class TransactionSearch extends BaseController
         $type = $json['type'] ?? '';
         $dateFrom = $json['date_from'] ?? '';
         $dateTo = $json['date_to'] ?? '';
+        $timeFrom = $json['time_from'] ?? '';
+        $timeTo = $json['time_to'] ?? '';
 
         $transactionModel = new TransactionModel();
 
@@ -89,8 +91,17 @@ class TransactionSearch extends BaseController
             $query->where('transactions.transaction_date <=', $dateTo);
         }
 
+        if (!empty($timeFrom)) {
+            $query->where('transactions.transaction_time >=', $timeFrom . ':00');
+        }
+
+        if (!empty($timeTo)) {
+            $query->where('transactions.transaction_time <=', $timeTo . ':59');
+        }
+
         $query
             ->orderBy('transactions.transaction_date', 'DESC')
+            ->orderBy('transactions.transaction_time', 'DESC')
             ->orderBy('transactions.id', 'DESC');
         
         $results = $query->findALL();
